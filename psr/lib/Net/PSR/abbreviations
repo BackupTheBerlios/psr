@@ -1,0 +1,19 @@
+#this is a configuration file for Pimp Sound Robot
+#each line will contain an abbrieviation followed
+#by a colon and the desired statement.
+#ex:  lol:laugh out loud
+
+lol:heh heh heh
+rofl:bwahaha
+brb:be right back
+bbiab:be back in a bit
+bbl:be back later
+l8r:later
+cya:see ya
+nm:never mind
+ttys:talk to you soon
+ttyl:talk to you later
+fyi:for your information
+bc:because
+omg:oh my God
+

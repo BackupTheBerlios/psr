@@ -1,0 +1,261 @@
+NAME
+    PSR - Pimp Sound Robot
+
+SYNOPSIS
+    Edit PSR.ini and configure to suit your installation.
+
+        sh -c "PSR.pl" &
+        sh -c "PSR_play_deamon.pl" &
+        sh -c "PSR_speak_deamon.pl" &
+        sh -c "PSR_save_deamon.pl" &
+
+    Send an IM to your PSR user containing only the text "/help" or "\help".
+
+DESCRIPTION
+    PSR is a sound playing bot. It can connect to various chat/IM networks,
+    and also has a web front end in the works. Clients can send it commands
+    via any chat/IM client, and it will run them. It's ideally suited for a
+    small room full of office workers, where each can play serious of sound
+    effects off a central PSR.
+
+    It accepts commands such as:
+
+    /play bushism1.wav ndynamite_idiot.wav
+
+    ...which would play those sound clips in order, which can be a lot of
+    fun for everyone within earshot of the PSR :-)
+
+    It can also speak any text you send it, ans has some rudimentary file
+    management commands built in as well.
+
+    Work has also begun on tying it into icecast, so that the PSR sounds can
+    be streamed to anyone anywhere.
+
+INSTALLATION
+    Installation is by standard perl Makefile.PL. You can tell it where you
+    want it to install the files via command line options. See perldoc
+    ExtUtils::MakeMaker for details.
+
+    By default, Net::PSR.pm is installed in your perl site libs directory;
+    PSR.ini abbreviations config files are stored under the "PSR" directory
+    in your perl site libs; the programs ( PSR.pl, PSR_play_deamon.pl,
+    PSR_save_deamon.pl, PSR_speak_deamon.pl ) are installed to
+    /usr/local/bin; documentation is installed to your system "man"
+    directory.
+
+    The PSR.ini can be overridden by creating a ".PSR.ini" in the home
+    directory of the user running PSR.pl.
+
+      perl Makefile.PL
+      make
+      make test
+      make install
+
+    Requirements (all file/directory locations are configurable via the
+    PSR.ini file):
+
+    * An aol instant messanger(r) user name and password to be used by the
+    PSR.
+    * Edit the PSR.ini file to suit your needs.
+    * Read access to files within the "sounds" directory.
+    * Write access to the "sounds" directory itself (for /save capability).
+    * Read access to files within the "system_sounds" directory.
+    * Write access to the "log_file" (if enabled).
+    * Write access to each of the queue directories.
+
+CONFIGURATION
+    The "abbreviations" file is used by the PSR's text to speach engine. It
+    will expand any abbreviations listed into their full length words (or
+    whatever you want). You could also use this as a rudimentary way to
+    block swear words or whatever. The format of this file should be self
+    explanitory.
+
+    The PSR.ini file controls the configuration of the PSR.
+
+  PSR.ini [account] section
+    These settings are used to connect to the AOL Instant Messenger network.
+
+    * name
+        AOL Instant Messenger user name to be used by the PSR.
+
+    * password
+        AOL Instant Messenger user name to be used by the PSR.
+
+    * server
+        AOL Instant Messenger login server.
+
+    * port
+        AOL Instant Messenger login server port.
+
+  PSR.ini [authed_users] section
+    List of users allowed to access your PSR installation, because you
+    probably don't want the whole world to be able to play sounds in your
+    office.
+
+    Each entry should have the username in all lower case, no spaces, on the
+    left, and the value set to "1". eg:
+
+        my7337username76=1
+
+  PSR.ini [settings] section
+    This section configures how the PSR will opperate, and where all its
+    files will be stored and such.
+
+    * abbr_file
+        Full path to file containing a List of abbreviations to expand for
+        text to speach stuff.
+
+    * unmute_program
+        Command to run to unmute the sound sub system.
+
+        Default: /bin/aumix-minimal -v 50
+
+    * mute_program
+        Command to run to mute the sound sub system.
+
+        Default: /bin/aumix-minimal -v 0
+
+    * festival
+        Text to be spoken (text to speach) will be piped to this
+        command/program.
+
+        Default: /usr/bin/festival -b --tts
+
+    * mplayer
+        Command to run to play a sound file (full path to sound file will be
+        appended to the end of this command line).
+
+        Default: /usr/local/bin/mplayer -quiet -really-quiet
+
+    * fetcher
+        Command to run to fetch a file from a URL (URL will be appened to
+        the end of this command line).
+
+        Default: /usr/bin/wget -U PimpSoundRobot -q -O
+
+    * queue_dir
+        Directory where queue files will be written. Must be writable by the
+        PSR user.
+
+    * sounds_dir
+        Directory where you want sounds stored. Must be writable by the PSR
+        user for /save capability, but read only files can be placed here if
+        desired.
+
+    * log_file
+        File name to write log of commands. Must be writable by the PSR user
+        if "enable_logging" is turned on.
+
+    * enable_logging
+        Boolean value, whether or not you want to log all command sent to
+        the PSR.
+
+    * system_sounds
+        Directory where system sounds will be stored. If you would like a
+        certain sound played every time some specific command is passed to
+        PSR, you can place a .wav file in this directory and it will be
+        played before the command is executed.
+
+        Currently, the following are supported:
+
+          help
+          list
+          listlog
+          move
+          mute
+          play
+          proxy_msg
+          save
+          speak
+          status
+          unmute
+
+        For example, my personal installation has the Clapper "clap clap"
+        sound in this directory named "mute.wav" and "unmute.wav", and
+        people tend to get a kick out of that.
+
+USAGE
+    PSR is currently just an instant messanger bot. So, to use it, send it
+    an IM from another account.
+
+    Command list, and explaination:
+
+    /help
+        Will send you back an IM with the text:
+
+         /help
+         /say   text to speak aloud
+         /save  http://url.to/sound/file.mp3
+         /play  http://url.to/sound/file.mp3
+         /play  sound_file.mp3
+         /mvsnd [origfile] [newfile]
+         /list               (to list all available sound files)
+         /list  [perl regex] (only those matching the regex)
+         /status             (lists the status of the system)
+         /log   [nback] [count] (prints out last N lines of the log)
+         /msg   [rcpt] [text](proxy a message off to someone)
+         /mute               (mutes the system)
+         /unmute             (unmutes the system)
+
+    /say [text]
+        Run the given text through a text to speach engine (say it).
+        (actually, it queues it to be spoken).
+
+    /save [some url]
+        Save the given URL. It can only accept a single URL, and URL's can't
+        be mixed with file names. (actually, it queues it to be saved).
+
+    /play [some url]
+        Play the given URL. It can only accept a single URL, and URL's can't
+        be mixed with file names.
+
+    /play filename1.wav [filename2.mp3 ... filenameN.wav]
+        Play one or more sound clips in series (actually, it queues them to
+        be played).
+
+    /mvsnd [origfile] [newfile]
+        Rename a sound clip.
+
+    /list [regex]
+        With no arguement, it lists all the available sound clips.
+
+        Given an arguement, the arguement is used as a perl regex, and
+        matching clip names are returned.
+
+    /status
+        Displays the "mute" status of the system (whether or not it is
+        currently muted).
+
+    /log [###] [###]
+        Displays the last 10 lines of the log file, or however many lines
+        back you specify.
+
+    /msg [rcpt] [text]
+        Sends a message to user "rcpt" (basically, an IM proxy).
+
+    /mute
+        VERY IMPORTANT COMMAND TO KNOW (incase the boss comes by, or a phone
+        call comes in). Mutes the entire PSR system.
+
+    /unmute
+        un-Mutes the system (restores volume/mixer settings).
+
+TODO
+    Web frontend.
+
+    More inteligent command parsing (especially multiple URL support, and
+    mixed URL/Filename support).
+
+AUTHORS
+    Josh I. Miller
+
+COPYRIGHT
+    PSR is Copyright (c) 2004-2005 Josh I. Miller. All rights reserved.
+
+    You may distribute under the terms of either the GNU General Public
+    License or the Artistic License, as specified in the Perl README file.
+
+    WARRANTY
+    The PSR is free Open Source software. IT COMES WITHOUT WARRANTY OF ANY
+    KIND.
+

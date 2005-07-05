@@ -1,0 +1,15 @@
+bin/PSR.pl
+bin/PSR_play_deamon.pl
+bin/PSR_save_deamon.pl
+bin/PSR_speak_deamon.pl
+lib/Net/PSR.pm
+lib/Net/PSR/abbreviations
+lib/Net/PSR/PSR.ini
+Makefile.PL
+MANIFEST			This list of files
+META.yml
+README
+system_sounds/README
+t/1.t
+utils/topNhits.sh
+META.yml                                 Module meta-data (added by MakeMaker)

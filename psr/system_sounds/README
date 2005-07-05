@@ -1,0 +1,23 @@
+This directory can contain the system sounds. If you would like a
+certain sound played every time some specific command is passed to
+PSR, you can place a .wav file in this directory and it will be
+played before the command is executed.
+
+Currently, the following are supported:
+
+    help
+    list
+    listlog
+    move
+    mute
+    play
+    proxy_msg
+    save
+    speak
+    status
+    unmute
+
+For example, my personal installation has the Clapper "clap clap"
+sound in this directory named "mute.wav" and "unmute.wav", and
+people tend to get a kick out of that.
+
