@@ -652,7 +652,7 @@ sub send_msg
 	{
 		for (my $i = 0; $i < length($msg); $i += $maxlength)
 		{
-			$self->send_msg($to, substr($msg,$i, ($i+$maxlength) ) );
+			$self->send_msg($to, substr($msg,$i,$maxlength) );
 		}
 
 	} else {
