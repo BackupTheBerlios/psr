@@ -793,6 +793,15 @@ sub play
 			@parts = File::Spec->no_upwards(@parts);
 			# rebuild name
 			my $newfile = File::Spec->catfile(@parts);
+			# check for existing files, appending various extensions
+			$newfile = (-e $newfile)        ? $newfile        :
+			           (-e $newfile.'.wav') ? $newfile.'.wav' :
+			           (-e $newfile.'.WAV') ? $newfile.'.WAV' :
+			           (-e $newfile.'.mp3') ? $newfile.'.mp3' :
+			           (-e $newfile.'.MP3') ? $newfile.'.MP3' :
+			           (-e $newfile.'.asf') ? $newfile.'.asf' :
+			           (-e $newfile.'.ASF') ? $newfile.'.ASF' :
+			                                  $newfile        ;
 
 			if (! -e $newfile) {
 				$self->send_msg($sender, "FAILED! File doesn't exist: $newfile");
