@@ -13,6 +13,7 @@ Edit PSR.ini and configure to suit your installation.
 
     sh -c "PSR.pl" &
     sh -c "PSR_play_deamon.pl" &
+    sh -c "PSR_bgplay_deamon.pl" &
     sh -c "PSR_speak_deamon.pl" &
     sh -c "PSR_save_deamon.pl" &
 
@@ -36,7 +37,7 @@ Work has also begun on tying it into icecast, so that the PSR sounds can be stre
 
 Installation is by standard perl Makefile.PL. You can tell it where you want it to install the files via command line options. See perldoc ExtUtils::MakeMaker for details.
 
-By default, Net::PSR.pm is installed in your perl site libs directory; PSR.ini abbreviations config files are stored under the "PSR" directory in your perl site libs; the programs ( PSR.pl, PSR_play_deamon.pl, PSR_save_deamon.pl, PSR_speak_deamon.pl ) are installed to /usr/local/bin; documentation is installed to  your system "man" directory.
+By default, Net::PSR.pm is installed in your perl site libs directory; PSR.ini abbreviations config files are stored under the "PSR" directory in your perl site libs; the programs ( PSR.pl, PSR_play_deamon.pl, PSR_bgplay_deamon.pl, PSR_save_deamon.pl, PSR_speak_deamon.pl ) are installed to /usr/local/bin; documentation is installed to  your system "man" directory.
 
 The PSR.ini can be overridden by creating a ".PSR.ini" in the home directory of the user running PSR.pl.
 
@@ -178,6 +179,7 @@ Currently, the following are supported:
   move
   mute
   play
+  bgplay
   proxy_msg
   save
   speak
@@ -201,18 +203,20 @@ Command list, and explaination:
 Will send you back an IM with the text:
 
  /help
- /say   text to speak aloud
- /save  http://url.to/sound/file.mp3
- /play  http://url.to/sound/file.mp3
- /play  sound_file.mp3
- /mvsnd [origfile] [newfile]
- /list               (to list all available sound files)
- /list  [perl regex] (only those matching the regex)
- /status             (lists the status of the system)
- /log   [nback] [count] (prints out last N lines of the log)
- /msg   [rcpt] [text](proxy a message off to someone)
- /mute               (mutes the system)
- /unmute             (unmutes the system)
+ /say    text to speak aloud
+ /save   http://url.to/sound/file.mp3
+ /play   http://url.to/sound/file.mp3
+ /play   sound_file.mp3
+ /bgplay http://url.to/sound/file.mp3
+ /bgplay sound_file.mp3
+ /mvsnd  [origfile] [newfile]
+ /list                (to list all available sound files)
+ /list   [perl regex] (only those matching the regex)
+ /status              (lists the status of the system)
+ /log    [nback] [count] (prints out last N lines of the log)
+ /msg    [rcpt] [text](proxy a message off to someone)
+ /mute                (mutes the system)
+ /unmute              (unmutes the system)
 
 =item /say [text]
 
@@ -229,6 +233,14 @@ Play the given URL. It can only accept a single URL, and URL's can't be mixed wi
 =item /play filename1.wav [filename2.mp3 ... filenameN.wav]
 
 Play one or more sound clips in series (actually, it queues them to be played).
+
+=item /bgplay [some url]
+
+Play the given URL in the background thread. It can only accept a single URL, and URL's can't be mixed with file names.
+
+=item /bgplay filename1.wav [filename2.mp3 ... filenameN.wav]
+
+Play one or more sound clips in series in the background thread (actually, it queues them to be played).
 
 =item /mvsnd [origfile] [newfile]
 
@@ -337,10 +349,11 @@ sub check_dirs
 	my $music_queue = File::Spec->catfile($queue,'music');
 	my $speak_queue = File::Spec->catfile($queue,'speak');
 	my $play_queue  = File::Spec->catfile($queue,'play');
+	my $bgplay_queue= File::Spec->catfile($queue,'bgplay');
 	my $save_queue  = File::Spec->catfile($queue,'save');
 	my $sounds_dir  = $self->cfg->{settings}{sounds_dir};
 	foreach my $dir ( ($queue, $music_queue, $speak_queue, $play_queue,
-	                   $save_queue, $sounds_dir, $log_dir) )
+	                   $bgplay_queue, $save_queue, $sounds_dir, $log_dir) )
 	{
 		unless ($self->create_dir($dir)) {
 			warn "Unable to create dir: $dir\n";
@@ -363,6 +376,7 @@ sub check_dirs
 	$self->music_queue($music_queue);
 	$self->speak_queue($speak_queue);
 	$self->play_queue($play_queue);
+	$self->bgplay_queue($bgplay_queue);
 	$self->save_queue($save_queue);
 	$self->sounds_dir($sounds_dir);
 	return 1;
@@ -469,6 +483,10 @@ sub im_in
 			$self->play($sender, $first_url)          :
 		($cmd eq 'play') ?
 			$self->play($sender, $stripped_message)   :
+		($cmd eq 'bgplay' && $first_url) ?
+			$self->bgplay($sender, $first_url)          :
+		($cmd eq 'bgplay') ?
+			$self->bgplay($sender, $stripped_message)   :
 		($cmd eq 'list') ?
 			$self->list($sender, $stripped_message)   :
 		($cmd eq 'log') ?
@@ -670,7 +688,7 @@ sub send_acks
 {
 	my $self = shift;
 
-	foreach my $type (qw(speak play music save))
+	foreach my $type (qw(speak play bgplay music save))
 	{
 		my $dir = $self->get_queue_dir_by_type($type);
 
@@ -697,6 +715,8 @@ sub send_acks
 #				$self->send_msg($user, "OK. Saved: \n\t".join("\n\t",@items)."\n") :
 #			($type eq 'play')  ?
 #				$self->send_msg($user, "OK. Played: \n\t".join("\n\t",@items)."\n") :
+#			($type eq 'bgplay')?
+#				$self->send_msg($user, "OK. Played: \n\t".join("\n\t",@items)."\n") :
 #			($type eq 'speak') ?
 #				$self->send_msg($user, "OK. Said: \n\t".join("\n\t",@items)."\n")   :
 #			($type eq 'music') ?
@@ -715,18 +735,20 @@ sub help
 	$self->system_event_sound('help');
 
 	my $message = "/help
-/say   text to speak aloud
-/save  http://url.to/sound/file.mp3
-/play  http://url.to/sound/file.mp3
-/play  sound_file.mp3
-/mvsnd [origfile] [newfile]
-/list               (to list all available sound files)
-/list  [perl regex] (only those matching the regex)
-/status             (lists the status of the system)
-/log   [nback] [count] (prints out last N lines of the log)
-/msg   [rcpt] [text](proxy a message off to someone)
-/mute               (mutes the system)
-/unmute             (unmutes the system)";
+/say    text to speak aloud
+/save   http://url.to/sound/file.mp3
+/play   http://url.to/sound/file.mp3
+/play   sound_file.mp3
+/bgplay http://url.to/sound/file.mp3
+/bgplay sound_file.mp3
+/mvsnd  [origfile] [newfile]
+/list                (to list all available sound files)
+/list   [perl regex] (only those matching the regex)
+/status              (lists the status of the system)
+/log    [nback] [count] (prints out last N lines of the log)
+/msg    [rcpt] [text](proxy a message off to someone)
+/mute                (mutes the system)
+/unmute              (unmutes the system)";
 	$self->send_msg($sender, $message);
 }
 
@@ -773,12 +795,35 @@ sub play
 	my $sender = shift;
 	my $msg = shift;
 
-	$self->system_event_sound('play');
+	return $self->_play($sender, $msg, 'play');
+}
+
+######################################################################
+## bgplay {{{2
+sub bgplay
+{
+	my $self = shift;
+	my $sender = shift;
+	my $msg = shift;
+
+	return $self->_play($sender, $msg, 'bgplay');
+}
+
+######################################################################
+## _play {{{2
+sub _play
+{
+	my $self = shift;
+	my $sender = shift;
+	my $msg = shift;
+	my $queue = shift; # play or bgplay
+
+	$self->system_event_sound($queue);
 
 	if ($self->extract_url($msg))
 	{
 		my $url = $self->extract_url($msg);
-		$self->queue('play',$sender,$url);
+		$self->queue($queue,$sender,$url);
 		$self->send_msg($sender, "URL queued for playback.");
 
 	} else {
@@ -806,7 +851,7 @@ sub play
 			if (! -e $newfile) {
 				$self->send_msg($sender, "FAILED! File doesn't exist: $newfile");
 			} else {
-				$self->queue('play', $sender, $newfile);
+				$self->queue($queue, $sender, $newfile);
 				$found_one++;
 			}
 		}
@@ -1103,13 +1148,15 @@ sub process_queue
 	foreach my $file (sort {$a cmp $b} @files)
 	{
 		my $full_file = File::Spec->catfile($dir,$file);
-		($type eq 'save')  ?
+		($type eq 'save')   ?
 			$self->save_queue_file($full_file)  :
-		($type eq 'play')  ?
+		($type eq 'play')   ?
 			$self->play_queue_file($full_file)  :
-		($type eq 'speak') ?
+		($type eq 'bgplay') ?
+			$self->play_queue_file($full_file)  :
+		($type eq 'speak')  ?
 			$self->speak_queue_file($full_file) :
-		($type eq 'music') ?
+		($type eq 'music')  ?
 			$self->play_queue_file($full_file)  :
         croak "Unknown type[$type]\n"       ;
 	}
@@ -1507,11 +1554,12 @@ sub get_queue_dir_by_type
 {
 	my $self = shift;
 	my $type = shift;
-	my $dir  = ($type eq 'play')  ? $self->play_queue()  :
-	           ($type eq 'speak') ? $self->speak_queue() :
-	           ($type eq 'music') ? $self->music_queue() :
-	           ($type eq 'save')  ? $self->save_queue()  :
-	                                ''                   ;
+	my $dir  = ($type eq 'play')   ? $self->play_queue()  :
+	           ($type eq 'bgplay') ? $self->bgplay_queue()  :
+	           ($type eq 'speak')  ? $self->speak_queue() :
+	           ($type eq 'music')  ? $self->music_queue() :
+	           ($type eq 'save')   ? $self->save_queue()  :
+	                                 ''                   ;
 	unless (-d $dir)
 	{
 		croak "queue dir doesn't exist: $dir\n";
@@ -1544,6 +1592,7 @@ sub abbr { my $s=shift; return $s->_accessor('_abbr', @_); }
 sub log_file { my $s=shift; return $s->_accessor('_log_file', @_); }
 sub save_queue { my $s=shift; return $s->_accessor('_save_queue', @_); }
 sub play_queue { my $s=shift; return $s->_accessor('_play_queue', @_); }
+sub bgplay_queue { my $s=shift; return $s->_accessor('_bgplay_queue', @_); }
 sub speak_queue { my $s=shift; return $s->_accessor('_speak_queue', @_); }
 sub music_queue { my $s=shift; return $s->_accessor('_music_queue', @_); }
 sub aim { my $s=shift; return $s->_accessor('_aim', @_); }

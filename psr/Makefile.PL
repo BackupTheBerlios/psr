@@ -16,6 +16,7 @@ WriteMakefile(
 	},
 	'EXE_FILES'      => [ qw( bin/PSR.pl
 	                          bin/PSR_play_deamon.pl
+	                          bin/PSR_bgplay_deamon.pl
 	                          bin/PSR_save_deamon.pl
 	                          bin/PSR_speak_deamon.pl ) ],
 	($] >= 5.005 ?    ## Add these new keywords supported since 5.005
