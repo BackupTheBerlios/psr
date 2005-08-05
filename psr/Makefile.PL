@@ -7,7 +7,7 @@ use Config();
 # the contents of the Makefile that is written.
 WriteMakefile(
 	'NAME'           => 'Net::PSR',
-	'VERSION'        => '0.30',
+	'VERSION'        => '0.32',
 	'PREREQ_PM'      => {
 		'Test::More'    => 0,
 		'Config::Tiny'  => 0,
