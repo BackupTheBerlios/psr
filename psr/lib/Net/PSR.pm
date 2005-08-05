@@ -180,6 +180,8 @@ Currently, the following are supported:
   mute
   play
   bgplay
+  randplay
+  randbgplay
   proxy_msg
   save
   speak
@@ -209,6 +211,8 @@ Will send you back an IM with the text:
  /play   sound_file.mp3
  /bgplay http://url.to/sound/file.mp3
  /bgplay sound_file.mp3
+ /randplay number_of_entries
+ /randbgplay number_of_entries
  /mvsnd  [origfile] [newfile]
  /list                (to list all available sound files)
  /list   [perl regex] (only those matching the regex)
@@ -241,6 +245,14 @@ Play the given URL in the background thread. It can only accept a single URL, an
 =item /bgplay filename1.wav [filename2.mp3 ... filenameN.wav]
 
 Play one or more sound clips in series in the background thread (actually, it queues them to be played).
+
+=item /randplay 1-5
+
+Randomly pick sounds to play.
+
+=item /randbgplay 1-5
+
+Randomly pick sounds to play... in the background track.
 
 =item /mvsnd [origfile] [newfile]
 
@@ -484,9 +496,13 @@ sub im_in
 		($cmd eq 'play') ?
 			$self->play($sender, $stripped_message)   :
 		($cmd eq 'bgplay' && $first_url) ?
-			$self->bgplay($sender, $first_url)          :
+			$self->bgplay($sender, $first_url)        :
 		($cmd eq 'bgplay') ?
-			$self->bgplay($sender, $stripped_message)   :
+			$self->bgplay($sender, $stripped_message) :
+		($cmd eq 'randplay') ?
+			$self->randplay($sender, $stripped_message) :
+		($cmd eq 'randbgplay') ?
+			$self->randbgplay($sender, $stripped_message) :
 		($cmd eq 'list') ?
 			$self->list($sender, $stripped_message)   :
 		($cmd eq 'log') ?
@@ -741,6 +757,8 @@ sub help
 /play   sound_file.mp3
 /bgplay http://url.to/sound/file.mp3
 /bgplay sound_file.mp3
+/randplay [number or entries to play]
+/randbgplay [number or entries to play]
 /mvsnd  [origfile] [newfile]
 /list                (to list all available sound files)
 /list   [perl regex] (only those matching the regex)
@@ -785,6 +803,63 @@ sub speak
 		my $stripped = $self->strip_msg($message);
 		$self->queue('speak', $sender, "$sender said $stripped");
 	}
+}
+
+######################################################################
+## randplay {{{2
+sub randplay
+{
+	my $self = shift;
+	my $sender = shift;
+	my $msg = shift;
+	$self->_randplay($sender, $msg, 'gg');
+}
+
+######################################################################
+## randbgplay {{{2
+sub randbgplay
+{
+	my $self = shift;
+	my $sender = shift;
+	my $msg = shift;
+	$self->_randplay($sender, $msg, 'bg');
+}
+
+######################################################################
+## _randplay {{{2
+sub _randplay
+{
+	my $self = shift;
+	my $sender = shift;
+	my $msg    = shift;
+	my $fgbg   = shift;
+
+	$msg =~ s/\D//;
+	$msg = 1 unless $msg;
+	$msg = 5 if $msg > 10; # check for max limit
+
+	my @sounds;
+	opendir(SNDS, $self->sounds_dir()) or return;
+	while (my $file = readdir SNDS)
+	{
+		my $abs_file = File::Spec->catfile($self->sounds_dir(), $file);
+		next if -d $abs_file;
+		next if $file =~ /^\./;
+		next unless -r $abs_file;
+		push(@sounds, $file);
+	}
+	closedir SNDS;
+
+	my $max_snd = @sounds;
+	my @new_msg;
+	for (1 .. $msg)
+	{
+		push(@new_msg, $sounds[ int(rand($max_snd + 1)) ] );
+	}
+	my $new_msg = join(' ', @new_msg);
+
+	my $playtype = ($fgbg eq 'bg') ? 'bgplay' : 'play';
+	$self->_play($sender, $new_msg, $playtype);
 }
 
 ######################################################################
