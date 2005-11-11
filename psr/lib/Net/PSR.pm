@@ -482,7 +482,7 @@ sub im_in
 		$self->send_msg($sender, 'Invalid command. For help, send /help');
 
 	} elsif ($stripped_message =~ /^[\/\\](\S+)/) {
-		my $cmd = lc($1);
+		my $cmd = $self->normalize_cmd($1);
 		$stripped_message =~ s/^[\/\\]\S+\s*//;
 		# a case: would be handy here :-)
 		($cmd eq 'rtfm') ?
@@ -1656,6 +1656,21 @@ sub extract_url
 	} else {
 		return;
 	}
+}
+
+######################################################################
+## normalize_cmd (takes command, or abbreviation, and returns full name) {{{2
+sub normalize_cmd
+{
+	my $self = shift;
+	my $cmd  = shift;
+
+	my @cmds = qw(rtfm help say play bgplay randplay randbgplay list log mvsnd save status mute unmute msg);
+	foreach my $c (@cmds)
+	{
+		return $c if $c =~ /^\Q$cmd\E/i;
+	}
+	return $cmd;
 }
 
 ######################################################################
