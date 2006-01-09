@@ -558,7 +558,7 @@ sub im_in
 	# So, we then split on && or &amp;&amp; or any combination of those,
 	# then handle each sub-message.
 	my $stripped_message = $self->strip_msg($message);
-	foreach my $msg (split /\s+(\&|\&amp;)(\&|\&amp;)\s+/, $stripped_message)
+	foreach my $msg (split /\s+(?:\&|\&amp;)(?:\&|\&amp;)\s+/, $stripped_message)
 	{
 		$msg =~ s/^\s+//; $msg =~ s/\s+$//;
 		$self->handle_incoming_event($sender, $msg);
@@ -1555,7 +1555,7 @@ sub strip_msg
 	# Parse out most HTML. (taken from http://www.rocketaware.com/perl/perlfaq9/How_do_I_remove_HTML_from_a_stri.htm)
 	$msg =~ s/<(?:[^>\'\"]*|([\'\"]).*?\1)*>//gs;
 	# remove bad stuff
-	$msg =~ s/[^A-Za-z0-9\s,\.\?\/\]\[\&\^\%\#\@\!\`\\_-]//g;
+	$msg =~ s/[^A-Za-z0-9\s,\.\?\/\]\[\&\^\%\#\@\!\`\\_;-]//g;
 	return $msg;
 }
 
