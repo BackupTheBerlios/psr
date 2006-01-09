@@ -167,6 +167,14 @@ File name to write log of commands. Must be writable by the PSR user if "enable_
 
 Boolean value, whether or not you want to log all command sent to the PSR.
 
+=item * send_command_confirmation_messages
+
+Boolean value, whether or not to send confirmation messages back once actions have been taken (eg. after playing requested sound files).
+
+=item * send_command_receipt_messages
+
+Boolean value, whether or not to send acknowledgement that command was recieved and is good, and is going to be processed (ex. File queued for playback).
+
 =item * system_sounds
 
 Directory where system sounds will be stored. If you would like a certain sound played every time some specific command is passed to PSR, you can place a .wav file in this directory and it will be played before the command is executed.
@@ -195,6 +203,16 @@ For example, my personal installation has the Clapper "clap clap" sound in this 
 =head1 USAGE
 
 PSR is currently just an instant messanger bot. So, to use it, send it an IM from another account.
+
+Commands may be combined together using the "&&" operator. This does not always do what you think it should do. For example, the command:
+
+    /play siren && /mute
+
+Does NOT play that sound file until completion then mute the system. It DOES queue the sound for to play, then mute the system. Whether or not the sound file begins to be played or not depends upon outside processing by the PSR_play_deamon.
+
+Combining comands is, nonetheless, still useful. For example:
+
+    /play http://some.site.com/soundclip.mp3 && /play fart.wav && /bgplay i_like_cheese.wav
 
 Command list, and explaination:
 
@@ -450,32 +468,13 @@ sub system_event_sound
 }
 
 ######################################################################
-#### aim specific stuff {{{1
-## im_in {{{2
-sub im_in
+## handle_incoming_event {{{2
+sub handle_incoming_event
 {
 	my $self = shift;
-	my ($aim, $sender, $message, $is_away);
-	if ($aim_module eq 'AIM')
-	{
-		my ($evt, $to, $nick, $auto_msg, $msg);
-		($aim, $evt, $sender, $to) = @_;
-		my $args = $evt->args();
-		($nick,  $auto_msg, $message) = @$args;
-	} else {
-		($aim, $sender, $message, $is_away) = @_;
-	}
+	my ($sender, $stripped_message) = @_;
 
-	unless ($self->check_auth($sender))
-	{
-		$self->log($sender, '[401] UNAUTHORIZED ACCESS');
-		return;
-	}
-
-	$self->log($sender, $message);
-
-	my $stripped_message = $self->strip_msg($message);
-	my $first_url = $self->extract_url($message);
+	my $first_url = $self->extract_url($stripped_message);
 
 	# help: if it begins w/ non-slash or non-backslash command
 	if ($stripped_message =~ /^[^\/\\]/) {
@@ -522,6 +521,49 @@ sub im_in
 		$self->send_msg($sender,
 			'Invalid command. For help, send /help') ;
 	}
+
+	return 1;
+}
+
+######################################################################
+#### aim specific stuff {{{1
+## im_in {{{2
+sub im_in
+{
+	my $self = shift;
+	my ($aim, $sender, $message, $is_away);
+	if ($aim_module eq 'AIM')
+	{
+		my ($evt, $to, $nick, $auto_msg, $msg);
+		($aim, $evt, $sender, $to) = @_;
+		my $args = $evt->args();
+		($nick,  $auto_msg, $message) = @$args;
+	} else {
+		($aim, $sender, $message, $is_away) = @_;
+	}
+
+	unless ($self->check_auth($sender))
+	{
+		$self->log($sender, '[401] UNAUTHORIZED ACCESS');
+		return;
+	}
+
+	$self->log($sender, $message);
+
+	# message may be multipart (eg. /play thing && /bgplay foo)
+	# must first get rid of html tags,
+	# then we were going to unescape html encoded data (such as &amp;),
+	# but they can pass in anything that way (like &192; for chr(192)),
+	# so that's not safe.
+	# So, we then split on && or &amp;&amp; or any combination of those,
+	# then handle each sub-message.
+	my $stripped_message = $self->strip_msg($message);
+	foreach my $msg (split /\s+(\&|\&amp;)(\&|\&amp;)\s+/, $stripped_message)
+	{
+		$msg =~ s/^\s+//; $msg =~ s/\s+$//;
+		$self->handle_incoming_event($sender, $msg);
+	}
+
 	return 1;
 }
 
@@ -1244,7 +1286,7 @@ sub process_queue
 			$self->speak_queue_file($full_file) :
 		($type eq 'music')  ?
 			$self->play_queue_file($full_file)  :
-        croak "Unknown type[$type]\n"       ;
+		croak "Unknown type[$type]\n"       ;
 	}
 }
 
@@ -1682,6 +1724,35 @@ sub normalize_cmd
 		return $c if $c =~ /^\Q$cmd\E/i;
 	}
 	return $cmd;
+}
+
+######################################################################
+## unescapeHTML (pulled from CGI.pm, takes string, returns string) {{{2
+## This is borrowed almost directly from CGI.pm, so that we don't have
+## to pull in that entire library just for this one method.
+sub unescapeHTML 
+{
+	my $self = shift;
+	my $string = shift;
+
+	return undef unless defined($string);
+	# we don't handle other character sets yet
+	my $latin = 1;
+	#my $latin = defined $self->{'.charset'} ? $self->{'.charset'} =~ /^(ISO-8859-1|WINDOWS-1252)$/i
+	#                                        : 1;
+
+	# thanks to Randal Schwartz for the correct solution to this one
+	$string=~ s[&(.*?);]{
+	local $_ = $1;
+	/^amp$/i    ? "&" :
+	/^quot$/i   ? '"' :
+	/^gt$/i     ? ">" :
+	/^lt$/i     ? "<" :
+	/^#(\d+)$/ && $latin         ? chr($1) :
+	/^#x([0-9a-f]+)$/i && $latin ? chr(hex($1)) :
+	$_
+	}gex;
+	return $string;
 }
 
 ######################################################################

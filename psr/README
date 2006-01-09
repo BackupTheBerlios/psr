@@ -1,17 +1,18 @@
 NAME
-    PSR - Pimp Sound Robot
+    Net::PSR - Pimp Sound Robot
 
 SYNOPSIS
     Edit PSR.ini and configure to suit your installation.
 
         sh -c "PSR.pl" &
         sh -c "PSR_play_deamon.pl" &
+        sh -c "PSR_bgplay_deamon.pl" &
         sh -c "PSR_speak_deamon.pl" &
         sh -c "PSR_save_deamon.pl" &
 
     Send an IM to your PSR user containing only the text "/help" or "\help".
 
-DESCRIPTION
+ABSTRACT
     PSR is a sound playing bot. It can connect to various chat/IM networks,
     and also has a web front end in the works. Clients can send it commands
     via any chat/IM client, and it will run them. It's ideally suited for a
@@ -39,9 +40,9 @@ INSTALLATION
     By default, Net::PSR.pm is installed in your perl site libs directory;
     PSR.ini abbreviations config files are stored under the "PSR" directory
     in your perl site libs; the programs ( PSR.pl, PSR_play_deamon.pl,
-    PSR_save_deamon.pl, PSR_speak_deamon.pl ) are installed to
-    /usr/local/bin; documentation is installed to your system "man"
-    directory.
+    PSR_bgplay_deamon.pl, PSR_save_deamon.pl, PSR_speak_deamon.pl ) are
+    installed to /usr/local/bin; documentation is installed to your system
+    "man" directory.
 
     The PSR.ini can be overridden by creating a ".PSR.ini" in the home
     directory of the user running PSR.pl.
@@ -150,6 +151,16 @@ CONFIGURATION
         Boolean value, whether or not you want to log all command sent to
         the PSR.
 
+    * send_command_confirmation_messages
+        Boolean value, whether or not to send confirmation messages back
+        once actions have been taken (eg. after playing requested sound
+        files).
+
+    * send_command_receipt_messages
+        Boolean value, whether or not to send acknowledgement that command
+        was recieved and is good, and is going to be processed (ex. File
+        queued for playback).
+
     * system_sounds
         Directory where system sounds will be stored. If you would like a
         certain sound played every time some specific command is passed to
@@ -164,6 +175,9 @@ CONFIGURATION
           move
           mute
           play
+          bgplay
+          randplay
+          randbgplay
           proxy_msg
           save
           speak
@@ -178,24 +192,42 @@ USAGE
     PSR is currently just an instant messanger bot. So, to use it, send it
     an IM from another account.
 
+    Commands may be combined together using the "&&" operator. This does not
+    always do what you think it should do. For example, the command:
+
+        /play siren && /mute
+
+    Does NOT play that sound file until completion then mute the system. It
+    DOES queue the sound for to play, then mute the system. Whether or not
+    the sound file begins to be played or not depends upon outside
+    processing by the PSR_play_deamon.
+
+    Combining comands is, nonetheless, still useful. For example:
+
+        /play http://some.site.com/soundclip.mp3 && /play fart.wav && /bgplay i_like_cheese.wav
+
     Command list, and explaination:
 
     /help
         Will send you back an IM with the text:
 
          /help
-         /say   text to speak aloud
-         /save  http://url.to/sound/file.mp3
-         /play  http://url.to/sound/file.mp3
-         /play  sound_file.mp3
-         /mvsnd [origfile] [newfile]
-         /list               (to list all available sound files)
-         /list  [perl regex] (only those matching the regex)
-         /status             (lists the status of the system)
-         /log   [nback] [count] (prints out last N lines of the log)
-         /msg   [rcpt] [text](proxy a message off to someone)
-         /mute               (mutes the system)
-         /unmute             (unmutes the system)
+         /say    text to speak aloud
+         /save   http://url.to/sound/file.mp3
+         /play   http://url.to/sound/file.mp3
+         /play   sound_file.mp3
+         /bgplay http://url.to/sound/file.mp3
+         /bgplay sound_file.mp3
+         /randplay number_of_entries
+         /randbgplay number_of_entries
+         /mvsnd  [origfile] [newfile]
+         /list                (to list all available sound files)
+         /list   [perl regex] (only those matching the regex)
+         /status              (lists the status of the system)
+         /log    [nback] [count] (prints out last N lines of the log)
+         /msg    [rcpt] [text](proxy a message off to someone)
+         /mute                (mutes the system)
+         /unmute              (unmutes the system)
 
     /say [text]
         Run the given text through a text to speach engine (say it).
@@ -212,6 +244,20 @@ USAGE
     /play filename1.wav [filename2.mp3 ... filenameN.wav]
         Play one or more sound clips in series (actually, it queues them to
         be played).
+
+    /bgplay [some url]
+        Play the given URL in the background thread. It can only accept a
+        single URL, and URL's can't be mixed with file names.
+
+    /bgplay filename1.wav [filename2.mp3 ... filenameN.wav]
+        Play one or more sound clips in series in the background thread
+        (actually, it queues them to be played).
+
+    /randplay 1-5
+        Randomly pick sounds to play.
+
+    /randbgplay 1-5
+        Randomly pick sounds to play... in the background track.
 
     /mvsnd [origfile] [newfile]
         Rename a sound clip.
@@ -246,10 +292,15 @@ TODO
     More inteligent command parsing (especially multiple URL support, and
     mixed URL/Filename support).
 
+SEE ALSO
+    Net::OSCAR
+
+    Net::AIM
+
 AUTHORS
     Josh I. Miller
 
-COPYRIGHT
+COPYRIGHT AND LICENSE
     PSR is Copyright (c) 2004-2005 Josh I. Miller. All rights reserved.
 
     You may distribute under the terms of either the GNU General Public
