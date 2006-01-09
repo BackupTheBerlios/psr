@@ -727,17 +727,20 @@ sub send_acks
 
 			chomp(@items);
 
-#			($type eq 'save')  ?
-#				$self->send_msg($user, "OK. Saved: \n\t".join("\n\t",@items)."\n") :
-#			($type eq 'play')  ?
-#				$self->send_msg($user, "OK. Played: \n\t".join("\n\t",@items)."\n") :
-#			($type eq 'bgplay')?
-#				$self->send_msg($user, "OK. Played: \n\t".join("\n\t",@items)."\n") :
-#			($type eq 'speak') ?
-#				$self->send_msg($user, "OK. Said: \n\t".join("\n\t",@items)."\n")   :
-#			($type eq 'music') ?
-#				$self->send_msg($user, "OK. Played: \n\t".join("\n\t",@items)."\n") :
-#			croak "Unknown type[$type]\n"       ;
+			if ($self->cfg->{settings}{send_command_confirmation_messages})
+			{
+				($type eq 'save')  ?
+					$self->send_msg($user, "OK. Saved: \n\t".join("\n\t",@items)."\n") :
+				($type eq 'play')  ?
+					$self->send_msg($user, "OK. Played: \n\t".join("\n\t",@items)."\n") :
+				($type eq 'bgplay')?
+					$self->send_msg($user, "OK. Played: \n\t".join("\n\t",@items)."\n") :
+				($type eq 'speak') ?
+					$self->send_msg($user, "OK. Said: \n\t".join("\n\t",@items)."\n")   :
+				($type eq 'music') ?
+					$self->send_msg($user, "OK. Played: \n\t".join("\n\t",@items)."\n") :
+				croak "Unknown type[$type]\n"       ;
+			}
 		}
 	}
 }
@@ -899,7 +902,9 @@ sub _play
 	{
 		my $url = $self->extract_url($msg);
 		$self->queue($queue,$sender,$url);
-		$self->send_msg($sender, "URL queued for playback.");
+		if ($self->cfg->{settings}{send_command_receipt_messages}) {
+			$self->send_msg($sender, "URL queued for playback.");
+		}
 
 	} else {
 		# message assumed to be a file name in $sounds_dir
@@ -930,7 +935,9 @@ sub _play
 				$found_one++;
 			}
 		}
-		$self->send_msg($sender, "File queued for playback.") if $found_one;
+		if ($self->cfg->{settings}{send_command_receipt_messages}) {
+			$self->send_msg($sender, "File queued for playback.") if $found_one;
+		}
 	}
 }
 
@@ -1078,7 +1085,9 @@ sub save
 			}
 
 			$self->queue('save',$sender,$url);
-			$self->send_msg($sender, "URL queued for saving.");
+			if ($self->cfg->{settings}{send_command_receipt_messages}) {
+				$self->send_msg($sender, "URL queued for saving.");
+			}
 
 		} else {
 			$self->send_msg($sender, "FAILED! Unable to read from sound directory: $dir");
@@ -1141,7 +1150,9 @@ sub move
 
 		if (rename $origfile, $newfile)
 		{
-			$self->send_msg($sender, "OK. Moved: $origbase $newbase");
+			if ($self->cfg->{settings}{send_command_receipt_messages}) {
+				$self->send_msg($sender, "OK. Moved: $origbase $newbase");
+			}
 			return 1;
 		} else {
 			$self->send_msg($sender, "FAILED! Unable to rename file '$origbase' to '$newbase'");
