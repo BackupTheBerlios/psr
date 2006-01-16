@@ -1555,7 +1555,7 @@ sub strip_msg
 	# Parse out most HTML. (taken from http://www.rocketaware.com/perl/perlfaq9/How_do_I_remove_HTML_from_a_stri.htm)
 	$msg =~ s/<(?:[^>\'\"]*|([\'\"]).*?\1)*>//gs;
 	# remove bad stuff
-	$msg =~ s/[^A-Za-z0-9\s,\.\?\/\]\[\&\^\%\#\@\!\`\\_;-]//g;
+        $msg =~ s/[^A-Za-z0-9\s,\.\?\/\]\[\&\^\%\#\@\!\`\\_:;-]//g;
 	return $msg;
 }
 
